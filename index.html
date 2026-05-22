@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jeopardy! Random Clue</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">JEOPARDY!</div>
+    <div class="header-meta">
+      <span id="counter">Clue 0</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="card">
+      <div class="card-meta">
+        <span class="round-tag" id="round-tag">Loading…</span>
+        <span class="category-tag" id="category-tag"></span>
+        <span class="value-tag" id="value-tag"></span>
+      </div>
+
+      <div class="clue-text" id="clue-text">
+        Fetching a random game from the J!Archive…
+      </div>
+
+      <div class="answer-box hidden" id="answer-box">
+        <div class="answer-label">Correct response</div>
+        <div class="answer-text" id="answer-text"></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="reveal-btn" disabled>Show Answer</button>
+        <button class="btn" id="next-btn" disabled>Next Clue →</button>
+      </div>
+
+      <div class="source" id="source"></div>
+    </section>
+  </main>
+
+  <footer>
+    Live clues from <a href="https://j-archive.com/" target="_blank" rel="noopener">j-archive.com</a> — fan-maintained archive of every aired Jeopardy! episode.
+  </footer>
+
+  <script src="game.js"></script>
+</body>
+</html>
