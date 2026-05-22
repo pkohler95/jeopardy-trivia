@@ -1,5 +1,6 @@
 // Pulls real clues from j-archive.com via a CORS proxy and shows them
-// one at a time. No score, no board — just clue → reveal → next.
+// one at a time. Two "next" modes: a fully random clue, or the next clue
+// from the same category in the same episode.
 
 const PROXIES = [
   url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
@@ -11,15 +12,38 @@ const PROXIES = [
 // safe range to avoid hitting unreleased/empty IDs.
 const MAX_GAME_ID = 8500;
 
-const queue = [];
+const queue = [];              // random-mode shuffled clues
+const gamesCache = new Map();  // gameId -> { gameTitle, clues }
+const seen = new Set();        // clueKey strings of clues already shown
+const loadedGameIds = new Set();
 let seenCount = 0;
 let currentClue = null;
 let isLoading = false;
-const loadedGameIds = new Set();
+let answerRevealed = false;
 
-// ============ DOM HELPERS ============
+// ============ HELPERS ============
 const el = id => document.getElementById(id);
 
+function clueKey(c) {
+  return `${c.gameId}::${c.id || c.clue.slice(0, 40)}`;
+}
+
+function parseValueNumber(v) {
+  if (!v) return 9999;
+  const m = v.match(/[\d,]+/);
+  return m ? parseInt(m[0].replace(/,/g, ''), 10) : 9999;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ============ RENDERING ============
 function setLoading(message) {
   const txt = el('clue-text');
   txt.classList.add('loading');
@@ -31,10 +55,14 @@ function setLoading(message) {
   el('answer-box').classList.add('hidden');
   el('reveal-btn').disabled = true;
   el('next-btn').disabled = true;
+  el('category-next-btn').disabled = true;
 }
 
 function renderClue(c) {
   currentClue = c;
+  seen.add(clueKey(c));
+  seenCount += 1;
+
   const txt = el('clue-text');
   txt.classList.remove('loading');
   txt.textContent = c.clue;
@@ -44,17 +72,50 @@ function renderClue(c) {
   el('value-tag').textContent = c.value || '';
 
   el('answer-text').textContent = c.answer;
+  answerRevealed = false;
   el('answer-box').classList.add('hidden');
+  el('reveal-btn').textContent = 'Show Answer';
+  el('reveal-btn').disabled = false;
+  el('next-btn').disabled = false;
 
   el('source').innerHTML = c.gameId
     ? `From <a href="https://j-archive.com/showgame.php?game_id=${c.gameId}" target="_blank" rel="noopener">${c.gameTitle || `Game #${c.gameId}`}</a>`
     : '';
 
-  el('reveal-btn').disabled = false;
-  el('next-btn').disabled = false;
-  el('reveal-btn').textContent = 'Show Answer';
-  seenCount += 1;
   el('counter').textContent = `Clue ${seenCount}`;
+  updateCategoryButton();
+}
+
+function updateCategoryButton() {
+  const btn = el('category-next-btn');
+  if (!currentClue) {
+    btn.disabled = true;
+    btn.textContent = 'Next in Category';
+    return;
+  }
+  const remaining = remainingInCategory();
+  if (remaining.length === 0) {
+    btn.disabled = true;
+    btn.textContent = 'No more in this category';
+  } else {
+    btn.disabled = false;
+    btn.textContent = `Next in "${currentClue.category}" (${remaining.length} left)`;
+  }
+}
+
+function remainingInCategory() {
+  if (!currentClue) return [];
+  const game = gamesCache.get(currentClue.gameId);
+  if (!game) return [];
+  return game.clues
+    .filter(c => c.category === currentClue.category && !seen.has(clueKey(c)))
+    .sort((a, b) => parseValueNumber(a.value) - parseValueNumber(b.value));
+}
+
+function toggleAnswer() {
+  answerRevealed = !answerRevealed;
+  el('answer-box').classList.toggle('hidden', !answerRevealed);
+  el('reveal-btn').textContent = answerRevealed ? 'Hide Answer' : 'Show Answer';
 }
 
 // ============ NETWORK ============
@@ -93,21 +154,18 @@ function parseGame(html, gameId) {
     clueCells.forEach(cell => {
       const id = cell.id || '';
       if (!id || id.endsWith('_r')) return;
-      // id format: clue_J_<col>_<row> or clue_DJ_<col>_<row>
       const parts = id.split('_');
       if (parts.length < 4) return;
       const col = parseInt(parts[2], 10) - 1;
       const clueText = cell.textContent.trim();
       if (!clueText) return;
 
-      // Find the matching answer cell
       const answerCell = doc.getElementById(id + '_r');
       let answer = '';
       if (answerCell) {
         const r = answerCell.querySelector('em.correct_response');
         if (r) answer = r.textContent.trim();
       }
-      // Fallback: look in onmouseover attribute of any ancestor div
       if (!answer) {
         const div = cell.closest('td')?.parentElement?.parentElement;
         const handler = div?.getAttribute?.('onmouseover');
@@ -118,7 +176,6 @@ function parseGame(html, gameId) {
       }
       if (!answer) return;
 
-      // Find dollar value
       const clueTd = cell.closest('td.clue');
       let value = '';
       if (clueTd) {
@@ -127,13 +184,14 @@ function parseGame(html, gameId) {
       }
 
       clues.push({
+        id,
         category: categories[col] || 'UNKNOWN',
         value,
         round: roundName,
         clue: clueText,
         answer,
         gameId,
-        gameTitle
+        gameTitle,
       });
     });
   }
@@ -141,7 +199,6 @@ function parseGame(html, gameId) {
   extractRound('jeopardy_round', 'Jeopardy!');
   extractRound('double_jeopardy_round', 'Double Jeopardy!');
 
-  // Final Jeopardy
   const fjDiv = doc.getElementById('final_jeopardy_round');
   if (fjDiv) {
     const fjCat = fjDiv.querySelector('td.category_name');
@@ -149,27 +206,19 @@ function parseGame(html, gameId) {
     const fjAnswerEl = doc.getElementById('clue_FJ_r')?.querySelector('em.correct_response');
     if (fjCat && fjClueEl && fjAnswerEl) {
       clues.push({
+        id: 'clue_FJ',
         category: fjCat.textContent.trim(),
         value: '',
         round: 'Final Jeopardy!',
         clue: fjClueEl.textContent.trim(),
         answer: fjAnswerEl.textContent.trim(),
         gameId,
-        gameTitle
+        gameTitle,
       });
     }
   }
 
   return { gameTitle, clues };
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 // ============ QUEUE MANAGEMENT ============
@@ -186,8 +235,9 @@ async function loadMoreClues() {
 
       try {
         const html = await fetchWithProxy(`https://j-archive.com/showgame.php?game_id=${gameId}`);
-        const { clues } = parseGame(html, gameId);
+        const { gameTitle, clues } = parseGame(html, gameId);
         if (clues.length > 0) {
+          gamesCache.set(gameId, { gameTitle, clues });
           queue.push(...shuffle(clues));
         }
       } catch (e) {
@@ -199,32 +249,36 @@ async function loadMoreClues() {
   }
 }
 
-async function nextClue() {
-  if (queue.length === 0) {
-    setLoading('Fetching a random game from the J!Archive…');
-    await loadMoreClues();
+async function nextRandomClue() {
+  // Skip queued clues we've already shown
+  while (queue.length > 0) {
+    const candidate = queue.shift();
+    if (!seen.has(clueKey(candidate))) {
+      renderClue(candidate);
+      if (queue.length < 4) loadMoreClues();
+      return;
+    }
   }
+  setLoading('Fetching a random game from the J!Archive…');
+  await loadMoreClues();
   if (queue.length === 0) {
     el('clue-text').textContent = "Couldn't reach the J!Archive. Try refreshing — the CORS proxies may be rate-limited.";
     el('clue-text').classList.remove('loading');
     return;
   }
-  renderClue(queue.shift());
+  return nextRandomClue();
+}
 
-  // Background refill so the next click is instant
-  if (queue.length < 4) loadMoreClues();
+function nextInCategory() {
+  const remaining = remainingInCategory();
+  if (remaining.length === 0) return; // button should already be disabled
+  renderClue(remaining[0]);
 }
 
 // ============ EVENTS ============
 document.addEventListener('DOMContentLoaded', () => {
-  el('reveal-btn').addEventListener('click', () => {
-    el('answer-box').classList.remove('hidden');
-    el('reveal-btn').disabled = true;
-  });
-
-  el('next-btn').addEventListener('click', () => {
-    nextClue();
-  });
-
-  nextClue();
+  el('reveal-btn').addEventListener('click', toggleAnswer);
+  el('next-btn').addEventListener('click', nextRandomClue);
+  el('category-next-btn').addEventListener('click', nextInCategory);
+  nextRandomClue();
 });
