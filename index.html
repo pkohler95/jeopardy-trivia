@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jeopardy! Random Clue</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
   <header>
@@ -27,6 +27,7 @@
       </div>
 
       <div class="answer-box hidden" id="answer-box">
+        <button class="hide-btn" id="hide-btn" aria-label="Hide answer">× Hide</button>
         <div class="answer-label">Correct response</div>
         <div class="answer-text" id="answer-text"></div>
       </div>
@@ -45,6 +46,6 @@
     Live clues from <a href="https://j-archive.com/" target="_blank" rel="noopener">j-archive.com</a> — fan-maintained archive of every aired Jeopardy! episode.
   </footer>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=3"></script>
 </body>
 </html>

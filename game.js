@@ -1,6 +1,6 @@
 // Pulls real clues from j-archive.com via a CORS proxy and shows them
-// one at a time. Two "next" modes: a fully random clue, or the next clue
-// from the same category in the same episode.
+// one at a time. Random Next pulls from a new show each click; Next in
+// Category advances within the current episode's category.
 
 const PROXIES = [
   url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
@@ -8,17 +8,16 @@ const PROXIES = [
   url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
-// J-Archive game IDs have grown over the years. ~9000+ exist; we pick from a
-// safe range to avoid hitting unreleased/empty IDs.
+// J-Archive has ~9000+ games; safe range avoids unreleased IDs.
 const MAX_GAME_ID = 8500;
 
-const queue = [];              // random-mode shuffled clues
-const gamesCache = new Map();  // gameId -> { gameTitle, clues }
-const seen = new Set();        // clueKey strings of clues already shown
+const gameQueue = [];               // gameIds ready for "Random Next"
+const gamesCache = new Map();       // gameId -> { gameTitle, clues }
+const seen = new Set();             // clueKey() strings of shown clues
 const loadedGameIds = new Set();
-let seenCount = 0;
 let currentClue = null;
 let isLoading = false;
+let seenCount = 0;
 let answerRevealed = false;
 
 // ============ HELPERS ============
@@ -32,15 +31,6 @@ function parseValueNumber(v) {
   if (!v) return 9999;
   const m = v.match(/[\d,]+/);
   return m ? parseInt(m[0].replace(/,/g, ''), 10) : 9999;
-}
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 // ============ RENDERING ============
@@ -72,9 +62,7 @@ function renderClue(c) {
   el('value-tag').textContent = c.value || '';
 
   el('answer-text').textContent = c.answer;
-  answerRevealed = false;
-  el('answer-box').classList.add('hidden');
-  el('reveal-btn').textContent = 'Show Answer';
+  hideAnswer();
   el('reveal-btn').disabled = false;
   el('next-btn').disabled = false;
 
@@ -112,10 +100,21 @@ function remainingInCategory() {
     .sort((a, b) => parseValueNumber(a.value) - parseValueNumber(b.value));
 }
 
+function showAnswer() {
+  answerRevealed = true;
+  el('answer-box').classList.remove('hidden');
+  el('reveal-btn').textContent = 'Hide Answer';
+}
+
+function hideAnswer() {
+  answerRevealed = false;
+  el('answer-box').classList.add('hidden');
+  el('reveal-btn').textContent = 'Show Answer';
+}
+
 function toggleAnswer() {
-  answerRevealed = !answerRevealed;
-  el('answer-box').classList.toggle('hidden', !answerRevealed);
-  el('reveal-btn').textContent = answerRevealed ? 'Hide Answer' : 'Show Answer';
+  if (answerRevealed) hideAnswer();
+  else showAnswer();
 }
 
 // ============ NETWORK ============
@@ -222,11 +221,11 @@ function parseGame(html, gameId) {
 }
 
 // ============ QUEUE MANAGEMENT ============
-async function loadMoreClues() {
+async function loadMoreGames() {
   if (isLoading) return;
   isLoading = true;
   try {
-    for (let attempt = 0; attempt < 6 && queue.length < 8; attempt++) {
+    for (let attempt = 0; attempt < 8 && gameQueue.length < 4; attempt++) {
       let gameId;
       do {
         gameId = 1 + Math.floor(Math.random() * MAX_GAME_ID);
@@ -238,7 +237,7 @@ async function loadMoreClues() {
         const { gameTitle, clues } = parseGame(html, gameId);
         if (clues.length > 0) {
           gamesCache.set(gameId, { gameTitle, clues });
-          queue.push(...shuffle(clues));
+          gameQueue.push(gameId);
         }
       } catch (e) {
         console.warn(`Game ${gameId} failed:`, e.message);
@@ -250,18 +249,23 @@ async function loadMoreClues() {
 }
 
 async function nextRandomClue() {
-  // Skip queued clues we've already shown
-  while (queue.length > 0) {
-    const candidate = queue.shift();
-    if (!seen.has(clueKey(candidate))) {
-      renderClue(candidate);
-      if (queue.length < 4) loadMoreClues();
-      return;
-    }
+  // Pull from a fresh game each click. If the next game has no unseen
+  // clues left (because Next-in-Category emptied it), skip and try next.
+  while (gameQueue.length > 0) {
+    const gameId = gameQueue.shift();
+    const game = gamesCache.get(gameId);
+    if (!game) continue;
+    const unseen = game.clues.filter(c => !seen.has(clueKey(c)));
+    if (unseen.length === 0) continue;
+    const pick = unseen[Math.floor(Math.random() * unseen.length)];
+    renderClue(pick);
+    if (gameQueue.length < 2) loadMoreGames(); // background prefetch
+    return;
   }
-  setLoading('Fetching a random game from the J!Archive…');
-  await loadMoreClues();
-  if (queue.length === 0) {
+
+  setLoading('Fetching a new game from the J!Archive…');
+  await loadMoreGames();
+  if (gameQueue.length === 0) {
     el('clue-text').textContent = "Couldn't reach the J!Archive. Try refreshing — the CORS proxies may be rate-limited.";
     el('clue-text').classList.remove('loading');
     return;
@@ -271,13 +275,14 @@ async function nextRandomClue() {
 
 function nextInCategory() {
   const remaining = remainingInCategory();
-  if (remaining.length === 0) return; // button should already be disabled
+  if (remaining.length === 0) return;
   renderClue(remaining[0]);
 }
 
 // ============ EVENTS ============
 document.addEventListener('DOMContentLoaded', () => {
   el('reveal-btn').addEventListener('click', toggleAnswer);
+  el('hide-btn').addEventListener('click', hideAnswer);
   el('next-btn').addEventListener('click', nextRandomClue);
   el('category-next-btn').addEventListener('click', nextInCategory);
   nextRandomClue();
