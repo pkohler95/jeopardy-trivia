@@ -30,13 +30,22 @@ const TOPICS = {
     label: 'Science',
     keywords: [
       'science', 'sciences', 'biology', 'chemistry', 'physics', 'anatomy',
-      'the body', 'math', 'maths', 'mathematics', 'numbers', 'arithmetic',
-      'geometry', 'algebra', 'computer', 'computers', 'computing', 'technology',
+      'the body', 'computer', 'computers', 'computing', 'technology',
       'tech', 'scientists', 'inventions', 'invention', 'astronomy', 'space',
       'planet', 'planets', 'elements', 'periodic', 'atoms', 'molecules',
       'medicine', 'medical', 'weather', 'animal', 'animals', 'botany',
       'plants', 'the brain', 'evolution', 'genetics', 'dna', 'cells',
       'ecology', 'environment', 'dinosaurs', 'nature', 'engineering'
+    ]
+  },
+  math: {
+    label: 'Math',
+    keywords: [
+      'math', 'maths', 'mathematics', 'mathematical', 'numbers', 'number',
+      'arithmetic', 'geometry', 'geometric', 'algebra', 'algebraic',
+      'calculus', 'equations', 'equation', 'statistics', 'percentages',
+      'percent', 'fractions', 'fraction', 'addition', 'subtraction',
+      'multiplication', 'division', 'do the math', 'by the numbers'
     ]
   },
   literature: {
