@@ -456,7 +456,6 @@ function setActiveTopic(topicKey) {
 // ============ EVENTS ============
 document.addEventListener('DOMContentLoaded', () => {
   el('reveal-btn').addEventListener('click', toggleAnswer);
-  el('hide-btn').addEventListener('click', hideAnswer);
   el('next-btn').addEventListener('click', () => nextRandomClue());
   el('category-next-btn').addEventListener('click', nextInCategory);
   el('back-btn').addEventListener('click', goBack);

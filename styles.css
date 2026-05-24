@@ -178,29 +178,8 @@ main {
   padding: 20px 24px;
   text-align: center;
   animation: revealFade 0.35s ease-out;
-  position: relative;
 }
 .answer-box.hidden { display: none; }
-
-.hide-btn {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: transparent;
-  color: var(--jeopardy-gold);
-  border: 1px solid rgba(255, 204, 0, 0.5);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.hide-btn:hover {
-  background: rgba(255, 204, 0, 0.15);
-}
 
 @keyframes revealFade {
   from { transform: translateY(8px); opacity: 0; }
@@ -336,15 +315,7 @@ footer a:hover { text-decoration: underline; }
     line-height: 1.2;
   }
 
-  /* Inline the Hide button so it doesn't overlap the answer on narrow screens. */
   .answer-box { padding: 18px 18px 16px; }
-  .hide-btn {
-    position: static;
-    display: block;
-    margin: 14px auto 0;
-    padding: 6px 14px;
-    font-size: 11px;
-  }
 
   footer { font-size: 11px; padding: 12px 14px; }
 }
