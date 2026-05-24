@@ -15,6 +15,8 @@ const gameQueue = [];               // gameIds ready for "Random Next"
 const gamesCache = new Map();       // gameId -> { gameTitle, clues }
 const seen = new Set();             // clueKey() strings of shown clues
 const loadedGameIds = new Set();
+const history = [];                 // clue objects in order shown
+let historyIndex = -1;              // pointer into history
 let currentClue = null;
 let isLoading = false;
 let seenCount = 0;
@@ -46,12 +48,26 @@ function setLoading(message) {
   el('reveal-btn').disabled = true;
   el('next-btn').disabled = true;
   el('category-next-btn').disabled = true;
+  el('back-btn').disabled = historyIndex <= 0;
 }
 
+// Show a clue and record it in history.
+function showClue(c) {
+  // Drop any forward history (no forward button, but keeps invariant clean)
+  history.length = historyIndex + 1;
+  history.push(c);
+  historyIndex = history.length - 1;
+  renderClue(c);
+}
+
+// Render without touching history (used by back/forward navigation).
 function renderClue(c) {
   currentClue = c;
-  seen.add(clueKey(c));
-  seenCount += 1;
+  const key = clueKey(c);
+  if (!seen.has(key)) {
+    seen.add(key);
+    seenCount += 1;
+  }
 
   const txt = el('clue-text');
   txt.classList.remove('loading');
@@ -72,6 +88,11 @@ function renderClue(c) {
 
   el('counter').textContent = `Clue ${seenCount}`;
   updateCategoryButton();
+  updateBackButton();
+}
+
+function updateBackButton() {
+  el('back-btn').disabled = historyIndex <= 0;
 }
 
 function updateCategoryButton() {
@@ -84,11 +105,17 @@ function updateCategoryButton() {
   const remaining = remainingInCategory();
   if (remaining.length === 0) {
     btn.disabled = true;
-    btn.textContent = 'No more in this category';
+    btn.textContent = 'Category exhausted';
   } else {
     btn.disabled = false;
-    btn.textContent = `Next in "${currentClue.category}" (${remaining.length} left)`;
+    btn.textContent = `Next in Category (${remaining.length})`;
   }
+}
+
+function goBack() {
+  if (historyIndex <= 0) return;
+  historyIndex -= 1;
+  renderClue(history[historyIndex]);
 }
 
 function remainingInCategory() {
@@ -258,7 +285,7 @@ async function nextRandomClue() {
     const unseen = game.clues.filter(c => !seen.has(clueKey(c)));
     if (unseen.length === 0) continue;
     const pick = unseen[Math.floor(Math.random() * unseen.length)];
-    renderClue(pick);
+    showClue(pick);
     if (gameQueue.length < 2) loadMoreGames(); // background prefetch
     return;
   }
@@ -276,7 +303,7 @@ async function nextRandomClue() {
 function nextInCategory() {
   const remaining = remainingInCategory();
   if (remaining.length === 0) return;
-  renderClue(remaining[0]);
+  showClue(remaining[0]);
 }
 
 // ============ EVENTS ============
@@ -285,5 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
   el('hide-btn').addEventListener('click', hideAnswer);
   el('next-btn').addEventListener('click', nextRandomClue);
   el('category-next-btn').addEventListener('click', nextInCategory);
+  el('back-btn').addEventListener('click', goBack);
   nextRandomClue();
 });

@@ -186,20 +186,26 @@ main {
   justify-content: center;
   flex-wrap: wrap;
 }
+.controls.primary-row { margin-bottom: 4px; }
+.controls.nav-row .btn { flex: 1 1 180px; }
 
 .btn {
   background: rgba(255,255,255,0.08);
   color: var(--jeopardy-white);
   font-weight: 700;
   border: 2px solid rgba(255,255,255,0.3);
-  padding: 14px 28px;
+  padding: 14px 20px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 15px;
-  letter-spacing: 1px;
+  font-size: 14px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   transition: transform 0.1s, background 0.15s, box-shadow 0.15s;
-  min-width: 180px;
+  min-width: 160px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn:hover:not(:disabled) {
   background: rgba(255,255,255,0.16);
@@ -244,7 +250,54 @@ footer a {
 }
 footer a:hover { text-decoration: underline; }
 
-@media (max-width: 600px) {
-  .card { padding: 24px 20px; }
-  .btn { min-width: 0; flex: 1; padding: 12px 18px; }
+@media (max-width: 640px) {
+  header { padding: 14px 18px; }
+  .logo { font-size: 24px; }
+  #counter { font-size: 12px; }
+
+  main { padding: 18px 12px; }
+  .card {
+    padding: 22px 18px 20px;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  .card-meta { gap: 6px; }
+  .round-tag, .category-tag, .value-tag {
+    font-size: 10px;
+    padding: 5px 9px;
+    letter-spacing: 1px;
+  }
+
+  .clue-text {
+    min-height: 110px;
+    padding: 4px 0;
+    line-height: 1.35;
+  }
+
+  /* Stack buttons full-width on mobile so labels never get clipped. */
+  .controls { flex-direction: column; gap: 10px; }
+  .controls.nav-row .btn { flex: 1 1 100%; }
+  .btn {
+    width: 100%;
+    min-width: 0;
+    padding: 13px 14px;
+    font-size: 13px;
+    letter-spacing: 0.6px;
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.2;
+  }
+
+  /* Inline the Hide button so it doesn't overlap the answer on narrow screens. */
+  .answer-box { padding: 18px 18px 16px; }
+  .hide-btn {
+    position: static;
+    display: block;
+    margin: 14px auto 0;
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+
+  footer { font-size: 11px; padding: 12px 14px; }
 }
