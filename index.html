@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jeopardy! Random Clue</title>
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <header>
@@ -13,6 +13,20 @@
       <span id="counter">Clue 0</span>
     </div>
   </header>
+
+  <nav class="topics-bar" id="topics-bar" aria-label="Filter by topic">
+    <button class="topic-chip active" data-topic="all">All Topics</button>
+    <button class="topic-chip" data-topic="history">History</button>
+    <button class="topic-chip" data-topic="science">Science</button>
+    <button class="topic-chip" data-topic="literature">Literature</button>
+    <button class="topic-chip" data-topic="geography">Geography</button>
+    <button class="topic-chip" data-topic="sports">Sports</button>
+    <button class="topic-chip" data-topic="moviesTv">Movies &amp; TV</button>
+    <button class="topic-chip" data-topic="music">Music</button>
+    <button class="topic-chip" data-topic="art">Art</button>
+    <button class="topic-chip" data-topic="food">Food &amp; Drink</button>
+    <button class="topic-chip" data-topic="wordplay">Wordplay</button>
+  </nav>
 
   <main>
     <section class="card" id="card">
@@ -49,6 +63,6 @@
     Live clues from <a href="https://j-archive.com/" target="_blank" rel="noopener">j-archive.com</a> — fan-maintained archive of every aired Jeopardy! episode.
   </footer>
 
-  <script src="game.js?v=4"></script>
+  <script src="game.js?v=5"></script>
 </body>
 </html>

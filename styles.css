@@ -48,6 +48,50 @@ header {
   text-transform: uppercase;
 }
 
+/* Topics filter bar */
+.topics-bar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 24px;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 204, 0, 0.18);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,204,0,0.35) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.topics-bar::-webkit-scrollbar { height: 6px; }
+.topics-bar::-webkit-scrollbar-thumb {
+  background: rgba(255,204,0,0.35);
+  border-radius: 3px;
+}
+
+.topic-chip {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--jeopardy-white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.topic-chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.topic-chip.active {
+  background: var(--jeopardy-gold);
+  color: var(--jeopardy-blue-darker);
+  border-color: var(--jeopardy-gold);
+}
+
 /* Main card */
 main {
   flex: 1;
@@ -254,6 +298,9 @@ footer a:hover { text-decoration: underline; }
   header { padding: 14px 18px; }
   .logo { font-size: 24px; }
   #counter { font-size: 12px; }
+
+  .topics-bar { padding: 10px 14px; gap: 6px; }
+  .topic-chip { font-size: 11px; padding: 6px 12px; letter-spacing: 0.5px; }
 
   main { padding: 18px 12px; }
   .card {

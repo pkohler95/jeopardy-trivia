@@ -11,6 +11,117 @@ const PROXIES = [
 // J-Archive has ~9000+ games; safe range avoids unreleased IDs.
 const MAX_GAME_ID = 8500;
 
+// Topics map J-Archive's countless unique category names to broad themes
+// via keyword matching against tokenized category strings.
+const TOPICS = {
+  all: { label: 'All Topics', keywords: null },
+  history: {
+    label: 'History',
+    keywords: [
+      'history', 'historical', 'war', 'wars', 'century', 'ancient', 'medieval',
+      'dynasty', 'dynasties', 'empire', 'empires', 'revolution', 'battle', 'battles',
+      'kings', 'queens', 'presidents', 'monarchs', 'rulers', 'civil war',
+      'world war', 'rome', 'roman', 'romans', 'greek', 'greeks', 'colonial',
+      'byzantine', 'pharaohs', '1800s', '1900s', '19th', '20th', '18th', '17th', '16th',
+      'founding fathers', 'historic'
+    ]
+  },
+  science: {
+    label: 'Science',
+    keywords: [
+      'science', 'sciences', 'biology', 'chemistry', 'physics', 'anatomy',
+      'the body', 'math', 'maths', 'mathematics', 'numbers', 'arithmetic',
+      'geometry', 'algebra', 'computer', 'computers', 'computing', 'technology',
+      'tech', 'scientists', 'inventions', 'invention', 'astronomy', 'space',
+      'planet', 'planets', 'elements', 'periodic', 'atoms', 'molecules',
+      'medicine', 'medical', 'weather', 'animal', 'animals', 'botany',
+      'plants', 'the brain', 'evolution', 'genetics', 'dna', 'cells',
+      'ecology', 'environment', 'dinosaurs', 'nature', 'engineering'
+    ]
+  },
+  literature: {
+    label: 'Literature',
+    keywords: [
+      'literature', 'literary', 'authors', 'author', 'books', 'novels',
+      'poetry', 'poets', 'poem', 'poems', 'writers', 'novelists', 'shakespeare',
+      'the bard', 'fiction', 'nonfiction', 'plays', 'playwright', 'playwrights',
+      'best seller', 'bestseller', 'bestsellers', 'classics', 'characters'
+    ]
+  },
+  geography: {
+    label: 'Geography',
+    keywords: [
+      'geography', 'capitals', 'capital', 'countries', 'country', 'cities',
+      'city', 'states', 'state', 'rivers', 'river', 'mountains', 'mountain',
+      'lakes', 'lake', 'islands', 'island', 'oceans', 'ocean', 'continents',
+      'continent', 'europe', 'european', 'asia', 'asian', 'africa', 'african',
+      'south america', 'north america', 'australia', 'antarctica', 'maps',
+      'map', 'travel', 'nations', 'nation', 'borders'
+    ]
+  },
+  sports: {
+    label: 'Sports',
+    keywords: [
+      'sport', 'sports', 'baseball', 'football', 'basketball', 'tennis',
+      'olympic', 'olympics', 'hockey', 'golf', 'boxing', 'soccer',
+      'athletes', 'athlete', 'nfl', 'mlb', 'nba', 'nhl', 'champions',
+      'world cup', 'super bowl', 'wimbledon', 'wrestling', 'racing',
+      'coaches', 'players', 'teams', 'stadiums'
+    ]
+  },
+  moviesTv: {
+    label: 'Movies & TV',
+    keywords: [
+      'movie', 'movies', 'film', 'films', 'hollywood', 'actor', 'actors',
+      'actress', 'actresses', 'tv', 'television', 'sitcom', 'sitcoms',
+      'oscar', 'oscars', 'academy award', 'director', 'directors', 'cartoon',
+      'cartoons', 'animated', 'silent film', 'shows', 'show', 'soap opera',
+      'netflix', 'hbo', 'cinema', 'screen', 'emmy', 'emmys'
+    ]
+  },
+  music: {
+    label: 'Music',
+    keywords: [
+      'music', 'song', 'songs', 'singer', 'singers', 'musician', 'musicians',
+      'band', 'bands', 'rock', 'pop music', 'jazz', 'classical music',
+      'country music', 'opera', 'operas', 'composer', 'composers', 'musical',
+      'musicals', 'broadway', 'album', 'albums', 'hit songs', 'lyrics',
+      'instruments', 'instrument', 'hip hop', 'rap', 'grammy', 'grammys'
+    ]
+  },
+  art: {
+    label: 'Art',
+    keywords: [
+      'art', 'arts', 'artist', 'artists', 'painter', 'painters', 'painting',
+      'paintings', 'sculpture', 'sculptor', 'architecture', 'museum', 'museums',
+      'renaissance', 'impressionism', 'modern art', 'fine art', 'photography',
+      'photographers'
+    ]
+  },
+  food: {
+    label: 'Food & Drink',
+    keywords: [
+      'food', 'foods', 'drink', 'drinks', 'cooking', 'wine', 'wines', 'beer',
+      'beers', 'chef', 'chefs', 'cuisine', 'restaurant', 'restaurants',
+      'vegetables', 'fruits', 'cocktails', 'cocktail', 'kitchen', 'recipe',
+      'recipes', 'dessert', 'desserts', 'candy', 'spices', 'baking', 'dining',
+      'cheese', 'meat', 'breads', 'bread', 'beverages'
+    ]
+  },
+  wordplay: {
+    label: 'Wordplay',
+    keywords: [
+      'words', 'word', 'vocabulary', 'spelling', 'letters', 'letter',
+      'rhyme', 'rhymes', 'anagrams', 'anagram', 'puns', 'pun',
+      'before after', 'compound', 'phrases', 'language', 'languages',
+      'synonyms', 'idioms', 'alliteration', 'hidden words', 'wordplay',
+      'crossword', 'palindrome', 'homophones', 'phrase', 'abbreviations'
+    ]
+  }
+};
+
+let activeTopic = 'all';
+
 const gameQueue = [];               // gameIds ready for "Random Next"
 const gamesCache = new Map();       // gameId -> { gameTitle, clues }
 const seen = new Set();             // clueKey() strings of shown clues
@@ -33,6 +144,23 @@ function parseValueNumber(v) {
   if (!v) return 9999;
   const m = v.match(/[\d,]+/);
   return m ? parseInt(m[0].replace(/,/g, ''), 10) : 9999;
+}
+
+function tokenize(s) {
+  return s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+function categoryMatchesTopic(category, topicKey) {
+  if (topicKey === 'all') return true;
+  const topic = TOPICS[topicKey];
+  if (!topic || !topic.keywords) return true;
+  const catTokens = tokenize(category);
+  const catJoined = catTokens.join(' ');
+  return topic.keywords.some(kw => {
+    const kwTokens = tokenize(kw);
+    if (kwTokens.length === 1) return catTokens.includes(kwTokens[0]);
+    return catJoined.includes(kwTokens.join(' '));
+  });
 }
 
 // ============ RENDERING ============
@@ -275,29 +403,39 @@ async function loadMoreGames() {
   }
 }
 
-async function nextRandomClue() {
-  // Pull from a fresh game each click. If the next game has no unseen
-  // clues left (because Next-in-Category emptied it), skip and try next.
+async function nextRandomClue(fetchAttempts = 0) {
+  // Pull from a fresh game each click. Filter by active topic; skip games
+  // with no matching unseen clues.
   while (gameQueue.length > 0) {
     const gameId = gameQueue.shift();
     const game = gamesCache.get(gameId);
     if (!game) continue;
-    const unseen = game.clues.filter(c => !seen.has(clueKey(c)));
-    if (unseen.length === 0) continue;
-    const pick = unseen[Math.floor(Math.random() * unseen.length)];
+    const candidates = game.clues.filter(c =>
+      !seen.has(clueKey(c)) && categoryMatchesTopic(c.category, activeTopic)
+    );
+    if (candidates.length === 0) continue;
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
     showClue(pick);
     if (gameQueue.length < 2) loadMoreGames(); // background prefetch
     return;
   }
 
-  setLoading('Fetching a new game from the J!Archive…');
-  await loadMoreGames();
-  if (gameQueue.length === 0) {
-    el('clue-text').textContent = "Couldn't reach the J!Archive. Try refreshing — the CORS proxies may be rate-limited.";
+  // Cap attempts so niche topics don't loop forever.
+  if (fetchAttempts >= 5) {
+    el('clue-text').textContent = activeTopic === 'all'
+      ? "Couldn't reach the J!Archive. Try refreshing — the CORS proxies may be rate-limited."
+      : `Couldn't find a "${TOPICS[activeTopic].label}" clue in the games we tried. Pick another topic or try again.`;
     el('clue-text').classList.remove('loading');
+    el('reveal-btn').disabled = true;
+    el('next-btn').disabled = false;
     return;
   }
-  return nextRandomClue();
+
+  setLoading(activeTopic === 'all'
+    ? 'Fetching a new game from the J!Archive…'
+    : `Searching for "${TOPICS[activeTopic].label}" clues…`);
+  await loadMoreGames();
+  return nextRandomClue(fetchAttempts + 1);
 }
 
 function nextInCategory() {
@@ -306,12 +444,24 @@ function nextInCategory() {
   showClue(remaining[0]);
 }
 
+function setActiveTopic(topicKey) {
+  if (!TOPICS[topicKey] || topicKey === activeTopic) return;
+  activeTopic = topicKey;
+  document.querySelectorAll('.topic-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.topic === topicKey);
+  });
+  nextRandomClue();
+}
+
 // ============ EVENTS ============
 document.addEventListener('DOMContentLoaded', () => {
   el('reveal-btn').addEventListener('click', toggleAnswer);
   el('hide-btn').addEventListener('click', hideAnswer);
-  el('next-btn').addEventListener('click', nextRandomClue);
+  el('next-btn').addEventListener('click', () => nextRandomClue());
   el('category-next-btn').addEventListener('click', nextInCategory);
   el('back-btn').addEventListener('click', goBack);
+  document.querySelectorAll('.topic-chip').forEach(chip => {
+    chip.addEventListener('click', () => setActiveTopic(chip.dataset.topic));
+  });
   nextRandomClue();
 });
